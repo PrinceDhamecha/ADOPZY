@@ -3,7 +3,23 @@ const fs = require("fs");
 const path = require("path");
 require("dotenv").config();
 
-const sslCert = fs.readFileSync(path.join(__dirname, "ca.pem"));
+let sslConfig = {
+  rejectUnauthorized: false,
+};
+
+// Safely try to read the ca.pem file to ensure it exists on Render
+try {
+  const certPath = path.join(__dirname, "ca.pem");
+  if (fs.existsSync(certPath)) {
+    sslConfig.ca = fs.readFileSync(certPath);
+  } else {
+    console.warn(
+      "⚠️ ca.pem not found at path, falling back to basic SSL settings."
+    );
+  }
+} catch (error) {
+  console.error("❌ Error reading ca.pem file:", error);
+}
 
 const pool = mysql.createPool({
   host: process.env.DB_HOST,
@@ -16,12 +32,10 @@ const pool = mysql.createPool({
   connectionLimit: 10,
   queueLimit: 0,
 
-  ssl: {
-    ca: sslCert,
-    rejectUnauthorized: false,
-  },
+  ssl: sslConfig,
 
-  connectTimeout: 10000,
+  // Increased to 25 seconds to survive the Render -> DO Bangalore network latency
+  connectTimeout: 25000,
 });
 
 module.exports = pool;
