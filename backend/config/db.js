@@ -12,12 +12,13 @@ const pool = mysql.createPool({
   connectionLimit: 10,
   queueLimit: 0,
 
-  // Aiven requires SSL, but setting it to an empty object
-  // tells mysql2 to auto-negotiate native TLS securely.
-  ssl: {},
+  // Updated for Aiven: explicitly allow auto-negotiating the handshake
+  ssl: {
+    rejectUnauthorized: false,
+  },
 
-  // Higher timeout to account for cross-region routing to Aiven
-  connectTimeout: 30000,
+  // Set to 35 seconds to guarantee Render has enough time to complete the TLS handshake with Aiven
+  connectTimeout: 35000,
 });
 
 module.exports = pool;
